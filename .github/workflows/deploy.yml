@@ -1,0 +1,36 @@
+name: 🚀 Deploy na Cloud Run
+
+on:
+  push:
+    branches:
+      - main  # Ação será realizada em push na branch 'main'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # Usar a última versão do Ubuntu
+
+    steps:
+      - name: 🛎️ Checkout do código
+        uses: actions/checkout@v3  # Faz o checkout do código do repositório
+
+      - name: 🔑 Autenticar no Google Cloud
+        uses: google-github-actions/auth@v1  # Ação para autenticação no Google Cloud
+        with:
+          credentials_json: ${{ secrets.GCLOUD_SERVICE_KEY }}  # Usando o segredo do GitHub com a chave da conta de serviço
+
+      - name: 🔧 Configurar Google Cloud
+        run: |
+          gcloud config set project ${{ secrets.GCLOUD_PROJECT_ID }}  # Configura o projeto
+          gcloud auth configure-docker  # Configura a autenticação do Docker para o Google Cloud Registry
+
+      - name: 📦 Construir e enviar imagem Docker
+        run: |
+          gcloud builds submit --tag gcr.io/${{ secrets.GCLOUD_PROJECT_ID }}/minha-api  # Envia a imagem para o Google Container Registry
+
+      - name: 🚀 Fazer deploy na Cloud Run
+        run: |
+          gcloud run deploy ${{ secrets.CLOUD_RUN_SERVICE }} \
+            --image gcr.io/${{ secrets.GCLOUD_PROJECT_ID }}/minha-api \
+            --platform managed \
+            --region ${{ secrets.CLOUD_RUN_REGION }} \
+            --allow-unauthenticated  # Permite acesso público à API
