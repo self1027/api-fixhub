@@ -11,14 +11,13 @@ const pool = new Pool({
   database: process.env.DB_NAME,             
   password: process.env.DB_PASSWORD,         
   port: process.env.DB_PORT || 5432,         
-  ssl: false,
 });
 
 app.use(express.json());
 
 app.get("/", async (req, res) => {
-   res.json({ message: "🚀 API rodando na Cloud Run!"})
-}
+  res.json({ message: "🚀 API rodando na Cloud Run!" });
+});
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
