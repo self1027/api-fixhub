@@ -1,15 +1,18 @@
-require("dotenv").config();
 const express = require("express");
 const { Pool } = require("pg");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Configuração do banco de dados
+// Configuração do banco de dados usando Cloud SQL Socket
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  user: process.env.DB_USER,                 
+  host: `/cloudsql/${process.env.DB_HOST}`,  
+  database: process.env.DB_NAME,             
+  password: process.env.DB_PASSWORD,         
+  port: process.env.DB_PORT || 5432,         
   ssl: {
-    rejectUnauthorized: false, // Pode ser necessário para conexões externas
+    rejectUnauthorized: false,               // Necessário para conexões externas
   },
 });
 

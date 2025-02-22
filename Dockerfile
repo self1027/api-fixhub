@@ -5,13 +5,13 @@ FROM node:18
 WORKDIR /app
 
 # Copia os arquivos de dependências primeiro (para otimizar cache)
-COPY package*.json ./
+COPY package*.json ./ 
 
 # Instala as dependências
 RUN npm install --omit=dev
 
 # Copia todo o código da API para dentro do container
-COPY . .
+COPY . . 
 
 # Expõe a porta 8080 para a API
 EXPOSE 8080
