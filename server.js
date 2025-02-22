@@ -27,10 +27,9 @@ app.post("/usuarios", async (req, res) => {
   }
 
   try {
-    const id = uuidv4();
     const result = await pool.query(
-      "INSERT INTO usuarios (id, nome, email, senha, tipo) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [id, nome, email, senha, tipo]
+      "INSERT INTO usuarios (nome, email, senha, tipo) VALUES ($1, $2, $3, $4) RETURNING *",
+      [nome, email, senha, tipo]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
