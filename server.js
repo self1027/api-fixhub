@@ -38,6 +38,31 @@ app.post("/usuarios", async (req, res) => {
   }
 });
 
+// Buscar usuários por nome
+app.get("/usuarios/nome", async (req, res) => {
+  const { nome } = req.query;  // Pega o nome da query string
+
+  if (!nome) {
+    return res.status(400).json({ error: "O nome é obrigatório" });
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM usuarios WHERE nome ILIKE $1",  // ILIKE é usado para busca case-insensitive
+      [`%${nome}%`]  // "%" faz com que a busca seja parcial
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Nenhum usuário encontrado" });
+    }
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erro ao buscar usuários por nome:', error);
+    res.status(500).json({ error: "Erro ao buscar usuários", details: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
