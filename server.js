@@ -19,6 +19,25 @@ app.get("/", async (req, res) => {
   res.json({ message: "🚀 API rodando na Cloud Runnnnn!" });
 });
 
+// Criar usuário
+app.post("/usuarios", async (req, res) => {
+  const { nome, email, senha, tipo } = req.body;
+  if (!nome || !email || !senha || tipo === undefined) {
+    return res.status(400).json({ error: "Todos os campos são obrigatórios" });
+  }
+
+  try {
+    const id = uuidv4();
+    const result = await pool.query(
+      "INSERT INTO usuarios (id, nome, email, senha, tipo) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [id, nome, email, senha, tipo]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao criar usuário" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
