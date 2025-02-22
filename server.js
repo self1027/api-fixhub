@@ -16,7 +16,7 @@ const pool = new Pool({
 app.use(express.json());
 
 app.get("/", async (req, res) => {
-  res.json({ message: "🚀 API rodando na Cloud Run!" });
+  res.json({ message: "🚀 API rodando na Cloud Runnnnn!" });
 });
 
 app.listen(PORT, () => {
