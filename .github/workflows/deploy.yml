@@ -30,7 +30,7 @@ jobs:
       - name: 🚀 Fazer deploy na Cloud Run
         run: |
           gcloud run deploy ${{ secrets.CLOUD_RUN_SERVICE }} \
-            --image gcr.io/${{ secrets.GCLOUD_PROJECT_ID }}/api-fixhub \
+            --image gcr.io/${{ secrets.GCLOUD_PROJECT_ID }}/${{ secrets.API_FILE_NAME }} \
             --platform managed \
             --region ${{ secrets.CLOUD_RUN_REGION }} \
             --allow-unauthenticated  # Permite acesso público à API
