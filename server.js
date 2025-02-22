@@ -9,5 +9,5 @@ app.listen(PORT, "0.0.0.0", () => {
 
 app.use(express.json());
 app.get("/", (req, res) => {
-  res.json({ message: "API rodando na Cloud Run!!" });
+  res.json({ message: "API rodando na Cloud Run!!!" });
 });
