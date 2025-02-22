@@ -17,13 +17,8 @@ const pool = new Pool({
 app.use(express.json());
 
 app.get("/", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM usuarios");
-    res.json({ message: "🚀 API rodando na Cloud Run!", usuarios: result.rows });
-  } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar usuários", error: error.message });
-  }
-});
+   res.json({ message: "🚀 API rodando na Cloud Run!"})
+}
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
