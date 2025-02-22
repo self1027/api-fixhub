@@ -6,7 +6,7 @@ const PORT = process.env.PORT || 8080;
 
 app.use(express.json());
 app.get("/", (req, res) => {
-  res.json({ message: "🚀 API rodando na Cloud Runnnnnnnnnn!" });
+  res.json({ message: "🚀 API rodando na Cloud Runnnnnnnnn!" });
 });
 
 app.listen(PORT, () => {
