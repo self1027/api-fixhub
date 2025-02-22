@@ -63,6 +63,56 @@ app.get("/usuarios/nome", async (req, res) => {
   }
 });
 
+// Buscar usuário por ID
+app.get("/usuarios/id", async (req, res) => {
+  const { id } = req.query;  // Pega o ID da query string
+
+  if (!id) {
+    return res.status(400).json({ error: "O ID é obrigatório" });
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM usuarios WHERE id = $1",  // Consulta o usuário pelo ID
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao buscar usuário por ID:', error);
+    res.status(500).json({ error: "Erro ao buscar usuário", details: error.message });
+  }
+});
+
+// Buscar usuário por email
+app.get("/usuarios/email", async (req, res) => {
+  const { email } = req.query;  // Pega o email da query string
+
+  if (!email) {
+    return res.status(400).json({ error: "O email é obrigatório" });
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM usuarios WHERE email = $1",  // Consulta o usuário pelo email
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao buscar usuário por email:', error);
+    res.status(500).json({ error: "Erro ao buscar usuário", details: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
