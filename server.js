@@ -4,10 +4,13 @@ const bcrypt = require("bcrypt");
 const { Pool } = require("pg");
 const rateLimit = require("express-rate-limit");
 
-const app = express();
 const PORT = process.env.PORT || 8080;
 const SECRET_KEY = process.env.SECRET_KEY;
 const REFRESH_SECRET_KEY = process.env.REFRESH_SECRET_KEY;
+
+const app = express();
+app.set('trust proxy', true);
+
 
 // Configuração do banco
 const pool = new Pool({
