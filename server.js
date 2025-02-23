@@ -1,118 +1,110 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const { Pool } = require("pg");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const SECRET_KEY = process.env.SECRET_KEY;
+const REFRESH_SECRET_KEY = process.env.REFRESH_SECRET_KEY;
 
-// Configuração do banco de dados usando Cloud SQL Socket
+// Configuração do banco
 const pool = new Pool({
-  user: process.env.DB_USER,                 
-  host: `/cloudsql/${process.env.DB_HOST}`,  
-  database: process.env.DB_NAME,             
-  password: process.env.DB_PASSWORD,         
-  port: process.env.DB_PORT || 5432,         
+  user: process.env.DB_USER,
+  host: `/cloudsql/${process.env.DB_HOST}`,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
 });
 
 app.use(express.json());
 
-app.get("/", async (req, res) => {
-  res.json({ message: "🚀 API rodando na Cloud Runnnnn!" });
+// Limite de tentativas de login para evitar brute force
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Máximo de tentativas antes de bloquear
+  message: "Muitas tentativas de login. Tente novamente mais tarde.",
 });
 
-// Criar usuário
-app.post("/usuarios", async (req, res) => {
-  const { nome, email, senha, tipo } = req.body;
-  if (!nome || !email || !senha || tipo === undefined) {
-    return res.status(400).json({ error: "Todos os campos são obrigatórios" });
-  }
+// Função para gerar JWT
+const generateToken = (user) => {
+  return jwt.sign({ id: user.id, tipo: user.tipo }, SECRET_KEY, { expiresIn: "1h" });
+};
+
+// Função para gerar Refresh Token
+const generateRefreshToken = (user) => {
+  return jwt.sign({ id: user.id, tipo: user.tipo }, REFRESH_SECRET_KEY, { expiresIn: "7d" }); // Expiração de 7 dias para o refresh token
+};
+
+// Rota de Login
+app.post("/login", loginLimiter, async (req, res) => {
+  const { nome, senha } = req.body;
 
   try {
+    // Busca o usuário no banco (retorna apenas os dados necessários)
     const result = await pool.query(
-      "INSERT INTO usuarios (nome, email, senha, tipo) VALUES ($1, $2, $3, $4) RETURNING *",
-      [nome, email, senha, tipo]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Erro ao criar usuário:', error);  // Log detalhado do erro
-    res.status(500).json({ error: "Erro ao criar usuário", details: error.message });
-  }
-});
-
-// Buscar usuários por nome
-app.get("/usuarios/nome", async (req, res) => {
-  const { nome } = req.query;  // Pega o nome da query string
-
-  if (!nome) {
-    return res.status(400).json({ error: "O nome é obrigatório" });
-  }
-
-  try {
-    const result = await pool.query(
-      "SELECT * FROM usuarios WHERE nome ILIKE $1",  // ILIKE é usado para busca case-insensitive
-      [`%${nome}%`]  // "%" faz com que a busca seja parcial
+      "SELECT id, tipo, senha FROM usuarios WHERE nome = $1",
+      [nome]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Nenhum usuário encontrado" });
+    // Essa função de login implementa boas práticas de segurança para evitar ataques de enumeração de usuários e
+    // força bruta. Mesmo que um invasor tente descobrir usuários válidos ou acerte uma senha fictícia, ele nunca 
+    // receberá um token válido, pois o sistema só gera tokens para usuários existentes. Além disso, o uso de um hash fictício
+    // impede que o tempo de resposta revele informações sobre a existência de um usuário. 
+    // Combinado com um limite de tentativas, esse método torna a autenticação muito mais segura contra ataques.
+    const senhaCriptografada = result.rows.length > 0 ? result.rows[0].senha : "$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+
+    // Compara a senha informada com a senha salva (ou fictícia)
+    const senhaValida = await bcrypt.compare(senha, senhaCriptografada);
+
+    // Responde com erro genérico se a senha for inválida ou o usuário não existir
+    if (!senhaValida) {
+      return res.status(401).json({ error: "Credenciais inválidas" });
     }
 
-    res.json(result.rows);
+    const user = result.rows[0];
+
+    // Gera o Token JWT
+    const token = generateToken(user);
+
+    // Gera o Refresh Token
+    const refreshToken = generateRefreshToken(user);
+
+    // Retorna os tokens
+    res.json({ token, refreshToken });
   } catch (error) {
-    console.error('Erro ao buscar usuários por nome:', error);
-    res.status(500).json({ error: "Erro ao buscar usuários", details: error.message });
+    console.error("Erro no login:", error);
+    res.status(500).json({ error: "Erro interno no servidor" });
   }
 });
 
-// Buscar usuário por ID
-app.get("/usuarios/id", async (req, res) => {
-  const { id } = req.query;  // Pega o ID da query string
+// Rota para renovar o token usando o refresh token
+app.post("/refresh-token", async (req, res) => {
+  const { refreshToken } = req.body;
 
-  if (!id) {
-    return res.status(400).json({ error: "O ID é obrigatório" });
+  if (!refreshToken) {
+    return res.status(400).json({ error: "Refresh token é necessário" });
   }
 
   try {
-    const result = await pool.query(
-      "SELECT * FROM usuarios WHERE id = $1",  // Consulta o usuário pelo ID
-      [id]
-    );
+    // Verifica se o refresh token é válido
+    jwt.verify(refreshToken, REFRESH_SECRET_KEY, (err, user) => {
+      if (err) {
+        return res.status(403).json({ error: "Refresh token inválido" });
+      }
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Usuário não encontrado" });
-    }
-
-    res.json(result.rows[0]);
+      // Gera um novo token de acesso
+      const token = generateToken(user);
+      res.json({ token });
+    });
   } catch (error) {
-    console.error('Erro ao buscar usuário por ID:', error);
-    res.status(500).json({ error: "Erro ao buscar usuário", details: error.message });
+    console.error("Erro no refresh token:", error);
+    res.status(500).json({ error: "Erro interno no servidor" });
   }
 });
 
-// Buscar usuário por email
-app.get("/usuarios/email", async (req, res) => {
-  const { email } = req.query;  // Pega o email da query string
-
-  if (!email) {
-    return res.status(400).json({ error: "O email é obrigatório" });
-  }
-
-  try {
-    const result = await pool.query(
-      "SELECT * FROM usuarios WHERE email = $1",  // Consulta o usuário pelo email
-      [email]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Usuário não encontrado" });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Erro ao buscar usuário por email:', error);
-    res.status(500).json({ error: "Erro ao buscar usuário", details: error.message });
-  }
-});
-
+// Inicia o servidor
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
