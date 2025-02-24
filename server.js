@@ -111,7 +111,7 @@ app.post("/cadastro", async (req, res) => {
 });
 
 // Rota de Login
-app.post("/login", loginLimiter, async (req, res) => {
+app.post("/login", verificarTipoUsuario([0, 1, 2, 3]), loginLimiter, async (req, res) => {
   const { nome, senha, device_uuid } = req.body; // Recebendo device_uuid
 
   try {
