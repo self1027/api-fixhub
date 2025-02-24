@@ -105,6 +105,11 @@ const verificarTipoUsuario = (tiposPermitidos) => {
 app.post("/cadastro", async (req, res) => {
   const { nome, email, senha, telefone, device_uuid } = req.body; // Recebendo telefone e device_uuid
 
+  // Verifica se o device_uuid foi fornecido
+  if (!device_uuid) {
+    return res.status(400).json({ error: "device_uuid é necessário para o cadastro." });
+  }
+
   try {
     // Verifica se o usuário já existe
     const result = await pool.query("SELECT * FROM usuarios WHERE nome = $1 OR email = $2", [nome, email]);
@@ -124,21 +129,26 @@ app.post("/cadastro", async (req, res) => {
     
     const userId = userResult.rows[0].id;
 
-    // Insere o token diretamente, sem a necessidade de tabela de dispositivos separada
-    if (device_uuid) {
-      // Cria o token e o refresh token para o dispositivo específico
-      const token = generateToken({ id: userId, tipo: 9 }); // tipo 9 fixo
-      const refreshToken = generateRefreshToken({ id: userId, tipo: 9 }); // tipo 9 fixo
+    // Cria o token e o refresh token para o dispositivo específico
+    const token = generateToken({ id: userId, tipo: 9 }); // tipo 9 fixo
+    const refreshToken = generateRefreshToken({ id: userId, tipo: 9 }); // tipo 9 fixo
 
+    // Verifica se o usuário já tem um token associado ao device_uuid
+    const tokenResult = await pool.query(
+      "SELECT * FROM user_tokens WHERE user_id = $1 AND device_uuid = $2",
+      [userId, device_uuid]
+    );
+
+    // Se não houver token, cria um novo
+    if (tokenResult.rows.length === 0) {
       await pool.query(
         "INSERT INTO user_tokens (user_id, token, refresh_token, device_uuid, expires_at) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')",
         [userId, token, refreshToken, device_uuid]
       );
-
-      res.status(201).json({ message: "Usuário cadastrado com sucesso", token, refreshToken });
-    } else {
-      res.status(400).json({ error: "device_uuid é necessário para o cadastro." });
     }
+
+    // Retorna os tokens
+    res.status(201).json({ message: "Usuário cadastrado com sucesso", token, refreshToken });
   } catch (error) {
     console.error("Erro no cadastro:", error);
     res.status(500).json({ error: "Erro interno no servidor" });
