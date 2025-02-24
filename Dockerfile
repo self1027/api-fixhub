@@ -10,11 +10,11 @@ COPY package*.json ./
 # Instala as dependências
 RUN npm install --omit=dev
 
-# Copia todo o código da API para dentro do container
-COPY . . 
+# Copia o código da API para dentro do container
+COPY src ./src
 
 # Expõe a porta 8080 para a API
 EXPOSE 8080
 
 # Comando para iniciar a API
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]

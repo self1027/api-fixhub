@@ -1,5 +1,5 @@
 const express = require("express");
-const authRoutes = require("./src/routes/authRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 app.set("trust proxy", 1);
