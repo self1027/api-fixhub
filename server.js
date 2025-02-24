@@ -42,14 +42,14 @@ const generateRefreshToken = (user) => {
 
 // Rota de Cadastro
 app.post("/cadastro", async (req, res) => {
-  const { nome, senha, tipo } = req.body;
+  const { nome, email, senha, tipo } = req.body;
 
   try {
     // Verifica se o usuário já existe
-    const result = await pool.query("SELECT * FROM usuarios WHERE nome = $1", [nome]);
+    const result = await pool.query("SELECT * FROM usuarios WHERE nome = $1 OR email = $2", [nome, email]);
 
     if (result.rows.length > 0) {
-      return res.status(400).json({ error: "Usuário já existe" });
+      return res.status(400).json({ error: "Usuário ou e-mail já existe" });
     }
 
     // Criptografa a senha
@@ -57,8 +57,8 @@ app.post("/cadastro", async (req, res) => {
 
     // Insere o usuário no banco de dados
     await pool.query(
-      "INSERT INTO usuarios (nome, senha, tipo) VALUES ($1, $2, $3)",
-      [nome, senhaCriptografada, tipo]
+      "INSERT INTO usuarios (nome, email, senha, tipo) VALUES ($1, $2, $3, $4)",
+      [nome, email, senhaCriptografada, tipo]
     );
 
     res.status(201).json({ message: "Usuário cadastrado com sucesso" });
