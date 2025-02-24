@@ -40,6 +40,34 @@ const generateRefreshToken = (user) => {
   return jwt.sign({ id: user.id, tipo: user.tipo }, REFRESH_SECRET_KEY, { expiresIn: "7d" }); // Expiração de 7 dias para o refresh token
 };
 
+// Rota de Cadastro
+app.post("/cadastro", async (req, res) => {
+  const { nome, senha, tipo } = req.body;
+
+  try {
+    // Verifica se o usuário já existe
+    const result = await pool.query("SELECT * FROM usuarios WHERE nome = $1", [nome]);
+
+    if (result.rows.length > 0) {
+      return res.status(400).json({ error: "Usuário já existe" });
+    }
+
+    // Criptografa a senha
+    const senhaCriptografada = await bcrypt.hash(senha, 10);
+
+    // Insere o usuário no banco de dados
+    await pool.query(
+      "INSERT INTO usuarios (nome, senha, tipo) VALUES ($1, $2, $3)",
+      [nome, senhaCriptografada, tipo]
+    );
+
+    res.status(201).json({ message: "Usuário cadastrado com sucesso" });
+  } catch (error) {
+    console.error("Erro no cadastro:", error);
+    res.status(500).json({ error: "Erro interno no servidor" });
+  }
+});
+
 // Rota de Login
 app.post("/login", loginLimiter, async (req, res) => {
   const { nome, senha } = req.body;
