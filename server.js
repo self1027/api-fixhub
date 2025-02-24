@@ -1,9 +1,10 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
 
 const pool = require("./config/db");
+const { generateToken, generateRefreshToken } = require("./config/auth");
+
 
 const PORT = process.env.PORT || 8080;
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -21,16 +22,6 @@ const loginLimiter = rateLimit({
   max: 5, // Máximo de tentativas antes de bloquear
   message: "Muitas tentativas de login. Tente novamente mais tarde.",
 });
-
-// Função para gerar JWT
-const generateToken = (user) => {
-  return jwt.sign({ id: user.id, tipo: user.tipo }, SECRET_KEY, { expiresIn: "1h" });
-};
-
-// Função para gerar Refresh Token
-const generateRefreshToken = (user) => {
-  return jwt.sign({ id: user.id, tipo: user.tipo }, REFRESH_SECRET_KEY, { expiresIn: "7d" }); // Expiração de 7 dias para o refresh token
-};
 
 //Verifica o Tipo do Usuário (Admin, Gerente, Contribuinte ou Morador)
 const verificarTipoUsuario = (tiposPermitidos) => {
