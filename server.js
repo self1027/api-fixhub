@@ -132,25 +132,31 @@ app.post("/login", verificarTipoUsuario([0, 1, 2, 3]), loginLimiter, async (req,
 
     const user = result.rows[0];
 
-    // Gera o Token JWT
-    const token = generateToken(user);
-
-    // Gera o Refresh Token
-    const refreshToken = generateRefreshToken(user);
-
     // Verifica se já existe um token para o dispositivo com device_uuid
     const tokenResult = await pool.query(
       "SELECT * FROM user_tokens WHERE user_id = $1 AND device_uuid = $2",
       [user.id, device_uuid]
     );
 
-    if (tokenResult.rows.length === 0) {
-      // Se não houver token, cria um novo
+    if (tokenResult.rows.length > 0) {
+      // Se um token ativo existir, desativa o token anterior (ou remova-o)
       await pool.query(
-        "INSERT INTO user_tokens (user_id, token, refresh_token, device_uuid, expires_at) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')",
-        [user.id, token, refreshToken, device_uuid]
+        "UPDATE user_tokens SET expires_at = NOW() WHERE user_id = $1 AND device_uuid = $2",
+        [user.id, device_uuid]
       );
     }
+
+    // Gera o Token JWT
+    const token = generateToken(user);
+
+    // Gera o Refresh Token
+    const refreshToken = generateRefreshToken(user);
+
+    // Cria ou atualiza o token para o dispositivo específico
+    await pool.query(
+      "INSERT INTO user_tokens (user_id, token, refresh_token, device_uuid, expires_at) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days') ON CONFLICT (user_id, device_uuid) DO UPDATE SET token = $2, refresh_token = $3, expires_at = NOW() + INTERVAL '7 days'",
+      [user.id, token, refreshToken, device_uuid]
+    );
 
     // Retorna os tokens
     res.json({ token, refreshToken });
