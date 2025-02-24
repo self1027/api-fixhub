@@ -1,10 +1,10 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const rateLimit = require("express-rate-limit");
 
 const pool = require("./config/db");
 const { generateToken, generateRefreshToken } = require("./config/auth");
 const verificarTipoUsuario = require("./middlewares/verifyUserType");
+const loginLimiter = require("./middlewares/loginLimiter");
 
 const PORT = process.env.PORT || 8080;
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -14,13 +14,6 @@ const app = express();
 app.set("trust proxy", 1);
 
 app.use(express.json());
-
-// Limite de tentativas de login para evitar brute force
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // Máximo de tentativas antes de bloquear
-  message: "Muitas tentativas de login. Tente novamente mais tarde.",
-});
 
 app.post("/cadastro", async (req, res) => {
   const { nome, email, senha, telefone } = req.body;
