@@ -1,8 +1,9 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { Pool } = require("pg");
 const rateLimit = require("express-rate-limit");
+
+const pool = require("./config/db");
 
 const PORT = process.env.PORT || 8080;
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -11,14 +12,6 @@ const REFRESH_SECRET_KEY = process.env.REFRESH_SECRET_KEY;
 const app = express();
 app.set("trust proxy", 1);
 
-// Configuração do banco
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: `/cloudsql/${process.env.DB_HOST}`,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT || 5432,
-});
 
 app.use(express.json());
 
