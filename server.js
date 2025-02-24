@@ -9,8 +9,7 @@ const SECRET_KEY = process.env.SECRET_KEY;
 const REFRESH_SECRET_KEY = process.env.REFRESH_SECRET_KEY;
 
 const app = express();
-app.set('trust proxy', true);
-
+app.set("trust proxy", 1);
 
 // Configuração do banco
 const pool = new Pool({
