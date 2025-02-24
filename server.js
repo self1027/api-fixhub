@@ -68,7 +68,7 @@ const verificarTipoUsuario = (tiposPermitidos) => {
 
 // Rota de Cadastro
 app.post("/cadastro", async (req, res) => {
-  const { nome, email, senha, tipo, device_uuid } = req.body; // Recebendo device_uuid
+  const { nome, email, senha, telefone, device_uuid } = req.body; // Recebendo telefone e device_uuid
 
   try {
     // Verifica se o usuário já existe
@@ -81,10 +81,10 @@ app.post("/cadastro", async (req, res) => {
     // Criptografa a senha
     const senhaCriptografada = await bcrypt.hash(senha, 10);
 
-    // Insere o usuário no banco de dados
+    // Insere o usuário no banco de dados, sempre com tipo 9
     const userResult = await pool.query(
-      "INSERT INTO usuarios (nome, email, senha, tipo) VALUES ($1, $2, $3, $4) RETURNING id",
-      [nome, email, senhaCriptografada, tipo]
+      "INSERT INTO usuarios (nome, email, senha, telefone, tipo) VALUES ($1, $2, $3, $4, 9) RETURNING id", // tipo 9 fixo
+      [nome, email, senhaCriptografada, telefone]
     );
     
     const userId = userResult.rows[0].id;
@@ -92,8 +92,8 @@ app.post("/cadastro", async (req, res) => {
     // Insere o token diretamente, sem a necessidade de tabela de dispositivos separada
     if (device_uuid) {
       // Cria o token e o refresh token para o dispositivo específico
-      const token = generateToken({ id: userId, tipo });
-      const refreshToken = generateRefreshToken({ id: userId, tipo });
+      const token = generateToken({ id: userId, tipo: 9 }); // tipo 9 fixo
+      const refreshToken = generateRefreshToken({ id: userId, tipo: 9 }); // tipo 9 fixo
 
       await pool.query(
         "INSERT INTO user_tokens (user_id, token, refresh_token, device_uuid, expires_at) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')",
@@ -104,7 +104,6 @@ app.post("/cadastro", async (req, res) => {
     } else {
       res.status(400).json({ error: "device_uuid é necessário para o cadastro." });
     }
-
   } catch (error) {
     console.error("Erro no cadastro:", error);
     res.status(500).json({ error: "Erro interno no servidor" });
