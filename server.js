@@ -41,7 +41,7 @@ const generateRefreshToken = (user) => {
 
 // Rota de Cadastro
 app.post("/cadastro", async (req, res) => {
-  const { nome, email, senha, tipo } = req.body;
+  const { nome, email, senha, tipo, device_uuid } = req.body; // Recebendo device_uuid
 
   try {
     // Verifica se o usuário já existe
@@ -55,12 +55,29 @@ app.post("/cadastro", async (req, res) => {
     const senhaCriptografada = await bcrypt.hash(senha, 10);
 
     // Insere o usuário no banco de dados
-    await pool.query(
-      "INSERT INTO usuarios (nome, email, senha, tipo) VALUES ($1, $2, $3, $4)",
+    const userResult = await pool.query(
+      "INSERT INTO usuarios (nome, email, senha, tipo) VALUES ($1, $2, $3, $4) RETURNING id",
       [nome, email, senhaCriptografada, tipo]
     );
+    
+    const userId = userResult.rows[0].id;
 
-    res.status(201).json({ message: "Usuário cadastrado com sucesso" });
+    // Insere o token diretamente, sem a necessidade de tabela de dispositivos separada
+    if (device_uuid) {
+      // Cria o token e o refresh token para o dispositivo específico
+      const token = generateToken({ id: userId, tipo });
+      const refreshToken = generateRefreshToken({ id: userId, tipo });
+
+      await pool.query(
+        "INSERT INTO user_tokens (user_id, token, refresh_token, device_uuid, expires_at) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')",
+        [userId, token, refreshToken, device_uuid]
+      );
+
+      res.status(201).json({ message: "Usuário cadastrado com sucesso", token, refreshToken });
+    } else {
+      res.status(400).json({ error: "device_uuid é necessário para o cadastro." });
+    }
+
   } catch (error) {
     console.error("Erro no cadastro:", error);
     res.status(500).json({ error: "Erro interno no servidor" });
@@ -69,7 +86,7 @@ app.post("/cadastro", async (req, res) => {
 
 // Rota de Login
 app.post("/login", loginLimiter, async (req, res) => {
-  const { nome, senha } = req.body;
+  const { nome, senha, device_uuid } = req.body; // Recebendo device_uuid
 
   try {
     // Busca o usuário no banco (retorna apenas os dados necessários)
@@ -78,17 +95,11 @@ app.post("/login", loginLimiter, async (req, res) => {
       [nome]
     );
 
-    // Essa função de login implementa boas práticas de segurança para evitar ataques de enumeração de usuários e
-    // força bruta. Mesmo que um invasor tente descobrir usuários válidos ou acerte uma senha fictícia, ele nunca 
-    // receberá um token válido, pois o sistema só gera tokens para usuários existentes. Além disso, o uso de um hash fictício
-    // impede que o tempo de resposta revele informações sobre a existência de um usuário. 
-    // Combinado com um limite de tentativas, esse método torna a autenticação muito mais segura contra ataques.
     const senhaCriptografada = result.rows.length > 0 ? result.rows[0].senha : "$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
 
-    // Compara a senha informada com a senha salva (ou fictícia)
+    // Compara a senha informada com a senha salva
     const senhaValida = await bcrypt.compare(senha, senhaCriptografada);
 
-    // Responde com erro genérico se a senha for inválida ou o usuário não existir
     if (!senhaValida) {
       return res.status(401).json({ error: "Credenciais inválidas" });
     }
@@ -101,35 +112,24 @@ app.post("/login", loginLimiter, async (req, res) => {
     // Gera o Refresh Token
     const refreshToken = generateRefreshToken(user);
 
+    // Verifica se já existe um token para o dispositivo com device_uuid
+    const tokenResult = await pool.query(
+      "SELECT * FROM user_tokens WHERE user_id = $1 AND device_uuid = $2",
+      [user.id, device_uuid]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      // Se não houver token, cria um novo
+      await pool.query(
+        "INSERT INTO user_tokens (user_id, token, refresh_token, device_uuid, expires_at) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')",
+        [user.id, token, refreshToken, device_uuid]
+      );
+    }
+
     // Retorna os tokens
     res.json({ token, refreshToken });
   } catch (error) {
     console.error("Erro no login:", error);
-    res.status(500).json({ error: "Erro interno no servidor" });
-  }
-});
-
-// Rota para renovar o token usando o refresh token
-app.post("/refresh-token", async (req, res) => {
-  const { refreshToken } = req.body;
-
-  if (!refreshToken) {
-    return res.status(400).json({ error: "Refresh token é necessário" });
-  }
-
-  try {
-    // Verifica se o refresh token é válido
-    jwt.verify(refreshToken, REFRESH_SECRET_KEY, (err, user) => {
-      if (err) {
-        return res.status(403).json({ error: "Refresh token inválido" });
-      }
-
-      // Gera um novo token de acesso
-      const token = generateToken(user);
-      res.json({ token });
-    });
-  } catch (error) {
-    console.error("Erro no refresh token:", error);
     res.status(500).json({ error: "Erro interno no servidor" });
   }
 });
