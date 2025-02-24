@@ -39,6 +39,33 @@ const generateRefreshToken = (user) => {
   return jwt.sign({ id: user.id, tipo: user.tipo }, REFRESH_SECRET_KEY, { expiresIn: "7d" }); // Expiração de 7 dias para o refresh token
 };
 
+//Verifica o Tipo do Usuário (Admin, Gerente, Contribuinte ou Morador)
+const verificarTipoUsuario = (tiposPermitidos) => {
+  return (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1]; // Extraí o token do cabeçalho
+
+    if (!token) {
+      return res.status(401).json({ error: "Token não fornecido" });
+    }
+
+    try {
+      // Decodifica o token
+      const decoded = jwt.verify(token, SECRET_KEY);
+      req.user = decoded; // Salva as informações do usuário decodificado na requisição
+      
+      // Verifica se o tipo do usuário está entre os tipos permitidos
+      const { tipo } = req.user;
+      if (!tiposPermitidos.includes(tipo)) {
+        return res.status(403).json({ error: "Ação não permitida para este tipo de usuário" });
+      }
+
+      next(); // Se autorizado, segue para a próxima etapa
+    } catch (error) {
+      return res.status(401).json({ error: "Token inválido ou expirado" });
+    }
+  };
+};
+
 // Rota de Cadastro
 app.post("/cadastro", async (req, res) => {
   const { nome, email, senha, tipo, device_uuid } = req.body; // Recebendo device_uuid
