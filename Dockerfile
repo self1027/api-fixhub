@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8080
 
 # Comando para iniciar a API
-CMD ["node", "src/server.js"]
+CMD ["node", "server.js"]
