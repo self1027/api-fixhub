@@ -1,4 +1,6 @@
 const express = require("express");
+const cadastroRoutes = require("./routes/cadastroRoutes");
+const loginRoutes = require("./routes/loginRoutes");
 
 const PORT = process.env.PORT || 8080;
 
