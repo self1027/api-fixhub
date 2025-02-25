@@ -33,5 +33,6 @@ jobs:
             --image gcr.io/${{ secrets.GCLOUD_PROJECT_ID }}/${{ secrets.API_FILE_NAME }} \
             --platform managed \
             --region ${{ secrets.CLOUD_RUN_REGION }} \
-            --allow-unauthenticated  # Permite acesso público à API
-            --set-env-vars BUCKET_NAME=${{ secrets.BUCKET_NAME }}
+            --allow-unauthenticated \
+            --update-env-vars BUCKET_NAME=${{ secrets.BUCKET_NAME }}
+
