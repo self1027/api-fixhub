@@ -11,7 +11,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 # Copia o código da API para dentro do container
-COPY src ..
+COPY . . 
 
 # Expõe a porta 8080 para a API
 EXPOSE 8080
