@@ -19,7 +19,7 @@ router.post("/", async (req, res) => {
 
         await pool.query(
             "INSERT INTO usuarios (nome, username, email, senha, telefone, tipo) VALUES ($1, $2, $3, $4, $5, 9)",
-            [nome, username, email, senhaCriptografada, telefone]
+            [nome, username, email, senhaCriptografada, telefone, tipo]
         );
 
         res.status(201).json({ message: "Usuário cadastrado com sucesso" });
