@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(express.json()); // Adicionando o middleware JSON
 
 // Rota de Login
-router.post("/", verificarTipoUsuario([0, 1, 2, 3, 9]), loginLimiter, async (req, res) => {
+router.post("/", loginLimiter, async (req, res) => {
     const { nome, senha, device_uuid } = req.body;
     try {
         const result = await pool.query(
