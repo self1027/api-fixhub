@@ -1,7 +1,7 @@
 const express = require("express");
 const cadastroRoutes = require("./routes/cadastroRoutes");
 const loginRoutes = require("./routes/loginRoutes");
-const uploadRoutes = require("./routes/uploadRoutes");
+const requerimentoRoutes = require("./routes/requerimentosRoutes");
 
 
 const PORT = process.env.PORT || 8080;
@@ -13,7 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/cadastro", cadastroRoutes);
 app.use("/login", loginRoutes);
-app.use("/files", uploadRoutes);
+app.use("/cadrastorequerimentos", requerimentoRoutes);
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
