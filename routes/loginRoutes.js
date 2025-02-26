@@ -10,7 +10,7 @@ router.use(express.json()); // Adicionando o middleware JSON
 
 // Rota de Login
 router.post("/", loginLimiter, async (req, res) => {
-    const { username, senha, device_uuid } = req.body;
+    const { username, senha } = req.body;
     try {
         const result = await pool.query(
             "SELECT id, tipo, senha FROM usuarios WHERE username = $1 OR email = $1",
@@ -22,6 +22,12 @@ router.post("/", loginLimiter, async (req, res) => {
         }
 
         const user = result.rows[0];
+
+        // Impedir login se o tipo do usuário for 9
+        if (user.tipo === 9) {
+            return res.status(403).json({ error: "Acesso negado" });
+        }
+
         const senhaValida = await bcrypt.compare(senha, user.senha);
 
         if (!senhaValida) {
