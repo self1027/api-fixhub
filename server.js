@@ -13,7 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/cadastro", cadastroRoutes);
 app.use("/login", loginRoutes);
-app.use("/cadrastorequerimentos", requerimentoRoutes);
+app.use("/requerimentos", requerimentoRoutes);
 
 
 app.listen(PORT, () => {

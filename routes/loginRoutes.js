@@ -10,28 +10,31 @@ router.use(express.json()); // Adicionando o middleware JSON
 
 // Rota de Login
 router.post("/", loginLimiter, async (req, res) => {
-    const { nome, senha, device_uuid } = req.body;
+    const { username, senha, device_uuid } = req.body;
     try {
         const result = await pool.query(
-            "SELECT id, tipo, senha FROM usuarios WHERE nome = $1",
-            [nome]
+            "SELECT id, tipo, senha FROM usuarios WHERE username = $1 OR email = $1",
+            [username]
         );
 
-        const senhaCriptografada = result.rows.length > 0 ? result.rows[0].senha : "$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-        const senhaValida = await bcrypt.compare(senha, senhaCriptografada);
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: "Credenciais inválidas" });
+        }
+
+        const user = result.rows[0];
+        const senhaValida = await bcrypt.compare(senha, user.senha);
 
         if (!senhaValida) {
             return res.status(401).json({ error: "Credenciais inválidas" });
         }
 
-        const user = result.rows[0];
         const token = generateToken(user);
         const refreshToken = generateRefreshToken(user);
 
         await pool.query(
-            `INSERT INTO user_tokens (user_id, token, refresh_token, device_uuid, expires_at) 
-             VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')`,
-            [user.id, token, refreshToken, device_uuid]
+            `INSERT INTO tokens (usuario_id, access_token, refresh_token, expiracao_access, expiracao_refresh) 
+             VALUES ($1, $2, $3, NOW() + INTERVAL '1 hour', NOW() + INTERVAL '7 days')`,
+            [user.id, token, refreshToken]
         );
 
         res.json({ token, refreshToken });
