@@ -12,7 +12,7 @@ router.post("/", loginLimiter, async (req, res) => {
     const { username, senha } = req.body;
     try {
         const result = await pool.query(
-            "SELECT id, tipo, senha FROM usuarios WHERE username = $1",
+            "SELECT id, tipo, senha, username, fullname FROM usuarios WHERE username = $1",
             [username]
         );
 
@@ -42,7 +42,12 @@ router.post("/", loginLimiter, async (req, res) => {
             [user.id, token, refreshToken]
         );
 
-        res.json({ token, refreshToken });
+        res.json({ 
+            token, 
+            refreshToken, 
+            username: user.username, 
+            fullname: user.fullname 
+        });
     } catch (error) {
         console.error("Erro no login:", error);
         res.status(500).json({ error: "Erro interno no servidor" });
