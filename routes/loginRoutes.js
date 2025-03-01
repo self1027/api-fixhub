@@ -9,8 +9,8 @@ router.use(express.json());
 
 // Login Route
 router.post("/", loginLimiter, async (req, res) => {
-    const { username, senha } = req.body; // Keeping 'senha' as per DB structure
-
+    const { username, password } = req.body;
+    
     try {
         const result = await pool.query(
             "SELECT id, tipo, senha, username, nome FROM usuarios WHERE username = $1",
@@ -29,7 +29,7 @@ router.post("/", loginLimiter, async (req, res) => {
         }
 
         // Validate password
-        const senhaValida = await bcrypt.compare(senha, user.senha);
+        const senhaValida = await bcrypt.compare(password, user.senha);
 
         if (!senhaValida) {
             return res.status(401).json({ error: "Credenciais inválidas" });
