@@ -5,14 +5,14 @@ const loginLimiter = require("../middlewares/loginLimiter");
 const { generateToken, generateRefreshToken } = require("../config/auth");
 
 const router = express.Router();
-router.use(express.json()); // Middleware para JSON
+router.use(express.json());
 
 // Rota de Login
 router.post("/", loginLimiter, async (req, res) => {
     const { username, senha } = req.body;
     try {
         const result = await pool.query(
-            "SELECT id, tipo, senha, username, fullname FROM usuarios WHERE username = $1",
+            "SELECT id, tipo, senha, username, nome FROM usuarios WHERE username = $1",
             [username]
         );
 
@@ -46,7 +46,7 @@ router.post("/", loginLimiter, async (req, res) => {
             token, 
             refreshToken, 
             username: user.username, 
-            fullname: user.fullname 
+            fullname: user.nome 
         });
     } catch (error) {
         console.error("Erro no login:", error);
