@@ -3,17 +3,16 @@ const bcrypt = require("bcrypt");
 const pool = require("../config/db");
 const loginLimiter = require("../middlewares/loginLimiter");
 const { generateToken, generateRefreshToken } = require("../config/auth");
-const verificarTipoUsuario = require("../middlewares/verifyUserType");
 
 const router = express.Router();
-router.use(express.json()); // Adicionando o middleware JSON
+router.use(express.json()); // Middleware para JSON
 
 // Rota de Login
 router.post("/", loginLimiter, async (req, res) => {
     const { username, senha } = req.body;
     try {
         const result = await pool.query(
-            "SELECT id, tipo, senha FROM usuarios WHERE username = $1 OR email = $1",
+            "SELECT id, tipo, senha FROM usuarios WHERE username = $1",
             [username]
         );
 
@@ -34,8 +33,8 @@ router.post("/", loginLimiter, async (req, res) => {
             return res.status(401).json({ error: "Credenciais inválidas" });
         }
 
-        const token = generateToken(user);
-        const refreshToken = generateRefreshToken(user);
+        const token = generateToken({ id: user.id, tipo: user.tipo });
+        const refreshToken = generateRefreshToken({ id: user.id });
 
         await pool.query(
             `INSERT INTO tokens (usuario_id, access_token, refresh_token, expiracao_access, expiracao_refresh) 
