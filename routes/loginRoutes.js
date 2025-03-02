@@ -13,7 +13,8 @@ router.post("/", loginLimiter, async (req, res) => {
     
     try {
         const result = await pool.query(
-            "SELECT id, tipo, senha, username, nome FROM usuarios WHERE username = $1",
+            `SELECT id, tipo, senha, username, nome, email, telefone, data_criacao 
+             FROM usuarios WHERE username = $1`,
             [username]
         );
 
@@ -23,23 +24,22 @@ router.post("/", loginLimiter, async (req, res) => {
 
         const user = result.rows[0];
 
-        // Prevent login if user type is 9
+        // Impedir login se o tipo do usuário for 9 (bloqueado)
         if (user.tipo === 9) {
             return res.status(403).json({ error: "Acesso negado" });
         }
 
-        // Validate password
+        // Validar senha
         const senhaValida = await bcrypt.compare(password, user.senha);
-
         if (!senhaValida) {
             return res.status(401).json({ error: "Credenciais inválidas" });
         }
 
-        // Generate tokens
+        // Gerar tokens
         const token = generateToken({ id: user.id, tipo: user.tipo });
         const refreshToken = generateRefreshToken({ id: user.id });
 
-        // Store tokens in the database
+        // Armazenar tokens no banco de dados
         await pool.query(
             `INSERT INTO tokens (usuario_id, access_token, refresh_token, expiracao_access, expiracao_refresh) 
              VALUES ($1, $2, $3, NOW() + INTERVAL '1 hour', NOW() + INTERVAL '7 days')`,
@@ -50,7 +50,11 @@ router.post("/", loginLimiter, async (req, res) => {
             token, 
             refreshToken, 
             username: user.username, 
-            fullname: user.nome // Keeping 'nome' from DB
+            fullname: user.nome,
+            email: user.email,
+            tipo: user.tipo,
+            telefone: user.telefone,
+            dataCriacao: user.data_criacao
         });
     } catch (error) {
         console.error("Erro no login:", error);
