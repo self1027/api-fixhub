@@ -69,4 +69,49 @@ router.post( "/", verificarTipoUsuario([1, 2, 3]), // Permitir que moradores tam
   }
 );
 
+// Rota para buscar requisições de manutenção com base no tipo de usuário
+router.get("/", verificarTipoUsuario([0, 1, 2, 3]), async (req, res) => {
+  try {
+    let query = `
+      SELECT 
+        m.id, m.descricao, m.prioridade, m.status, m.data_solicitacao, 
+        m.sindico_id, m.responsavel_id, m.morador_id, m.categoria_id,
+        c.nome AS categoria, b.nome AS bloco,
+        ARRAY_AGG(i.url_imagem) AS imagens
+      FROM manutencoes m
+      LEFT JOIN categorias c ON m.categoria_id = c.id
+      LEFT JOIN blocos b ON m.bloco_id = b.id
+      LEFT JOIN imagem_requisicoes i ON m.id = i.manutencao_id
+    `;
+
+    let whereClauses = [];
+    let values = [];
+
+    if (req.user.tipo === 1) { // Síndico
+      whereClauses.push("m.sindico_id = $1");
+      values.push(req.user.id);
+    } else if (req.user.tipo === 2) { // Responsável pela manutenção
+      whereClauses.push("m.responsavel_id = $1");
+      values.push(req.user.id);
+    } else if (req.user.tipo === 3) { // Morador
+      whereClauses.push("m.morador_id = $1");
+      values.push(req.user.id);
+    }
+
+    if (whereClauses.length > 0) {
+      query += " WHERE " + whereClauses.join(" AND ");
+    }
+
+    query += " GROUP BY m.id, c.nome, b.nome ORDER BY m.data_solicitacao DESC";
+
+    const result = await pool.query(query, values);
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Erro ao buscar requisições:", error);
+    res.status(500).json({ error: "Erro interno no servidor." });
+  }
+});
+
+
 module.exports = router;
